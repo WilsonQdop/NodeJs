@@ -1,5 +1,7 @@
 import http, { get } from 'node:http'
 
+import { json } from './middlewares/json.js';
+
 
 //request = obter todas as informações da requisição.
 //response = devolver as informações para quem chamou a requisição.
@@ -26,8 +28,10 @@ import http, { get } from 'node:http'
 const users = [];
 
 
-const server = http.createServer((request, response) =>{
+const server = http.createServer(async (request, response) =>{
     const { method, url } = request
+
+    await json(request, response)
 
     if (method === 'GET' && url === '/users') {
         return response
@@ -35,12 +39,13 @@ const server = http.createServer((request, response) =>{
         .end(JSON.stringify(users))
     }
     if (method === 'POST' && url === '/users') {
+        const{name, email,senha} = request.body
 
         users.push({
             id:1,
-            name: "Wilson",
-            email: "Wilson.qdop@gmail.com",
-            senha: "vaisefoder"
+            name,
+            email, 
+            senha,
         })
         return response.writeHead(201).end()
     }
