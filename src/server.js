@@ -1,7 +1,8 @@
 import http, { get } from 'node:http'
 import { json } from './middlewares/json.js';
-import { Database } from './middlewares/database.js';
-import { randomUUID } from 'node:crypto';
+import { routes } from './routes.js';
+import { extractQueryParams } from './extract-query-params.js';
+
 
 
 //request = obter todas as informações da requisição.
@@ -26,30 +27,37 @@ import { randomUUID } from 'node:crypto';
 
 //Http Status Code 
 
-const database = new Database()
+// Query Parameters === URL Stateful => usadas em (Filtros, paginação)
+    //http://localhost:3333/users?userId==1&name=Wilson
+
+// Route Parameters = identificação de recurso/rota
+    //GET http://localhost:3333/users/1
+    //DELETE http://localhost:3333/users/1
+
+// Request Body = Envio de informação de um formulário (HTTPs)
+    // {"name": "wilson", "password": "123"}
+
 
 const server = http.createServer(async (request, response) =>{
     const { method, url } = request
 
     await json(request, response)
 
-    if (method === 'GET' && url === '/users') {
-        const users = database.select('users')
-        return response
-        .end(JSON.stringify(users))
-    }
-    if (method === 'POST' && url === '/users') {
-        const{name, email,senha} = request.body
+    const route = routes.find(route => {
+        return route.method === method && route.path.test(url)
+    })
 
-        const user = {
-            id: randomUUID(),
-            name,
-            email, 
-            senha,
-        }
+    if (route) {
+        
+        const routeParams = request.url.match(route.path)
+        
+        const {query, ...params} = routeParams.groups
 
-        database.insert('users', user)
-        return response.writeHead(201).end()
+        
+        request.params = params
+        request.query = query ? extractQueryParams(query) : {}
+         
+        return route.handler(request,response)
     }
 
     return response.writeHead(404).end()
